@@ -27,6 +27,7 @@ test.describe('Get All Products', () => {
     test('should return 200 status code', async ({ request }) => {
         const response = await request.get('/api/v1/products');
         expect(response.status()).toBe(200);
+        expect(response.statusText()).toBe('OK');
     });
 
     test('response time should be less than 1000ms', async ({ request }) => {
@@ -127,14 +128,21 @@ test.describe('Get All Products', () => {
 });
 
 test.describe('Get Product by ID', () => {
+    let randomProductId: number;
+    test.beforeAll(async ({ request }) => {
+        const response = await request.get('/api/v1/products', { failOnStatusCode: true });
+        const products: ProductResponse[] = await response.json();
+        randomProductId = products[Math.floor(Math.random() * products.length)].id;
+    });
+
     test('should return 200 status code for valid product ID', async ({ request }) => {
-        const response = await request.get('/api/v1/products/124');
+        const response = await request.get(`/api/v1/products/${randomProductId}`);
         expect(response.status()).toBe(200);
     });
 
     test('response time should be less than 1000ms for valid product ID', async ({ request }) => {
         const startTime = Date.now();
-        await request.get('/api/v1/products/124', { failOnStatusCode: true });
+        await request.get(`/api/v1/products/${randomProductId}`, { failOnStatusCode: true });
         const endTime = Date.now();
         const responseTime = endTime - startTime;
         expect(responseTime).toBeLessThan(1000);
@@ -143,18 +151,24 @@ test.describe('Get Product by ID', () => {
     test('content-Type header should be application/json for valid product ID', async ({
         request,
     }) => {
-        const response = await request.get('/api/v1/products/124', { failOnStatusCode: true });
+        const response = await request.get(`/api/v1/products/${randomProductId}`, {
+            failOnStatusCode: true,
+        });
         expect(response.headers()['content-type']).toContain('application/json');
     });
 
     test('response should be an object for valid product ID', async ({ request }) => {
-        const response = await request.get('/api/v1/products/124', { failOnStatusCode: true });
+        const response = await request.get(`/api/v1/products/${randomProductId}`, {
+            failOnStatusCode: true,
+        });
         const product = await response.json();
         expect(typeof product).toBe('object');
     });
 
     test('product has all required properties', async ({ request }) => {
-        const response = await request.get('/api/v1/products/124', { failOnStatusCode: true });
+        const response = await request.get(`/api/v1/products/${randomProductId}`, {
+            failOnStatusCode: true,
+        });
         const product: ProductResponse = await response.json();
         expect(product).toHaveProperty('id');
         expect(product).toHaveProperty('title');
@@ -166,7 +180,9 @@ test.describe('Get Product by ID', () => {
     });
 
     test('product images are valid URLs for valid product ID', async ({ request }) => {
-        const response = await request.get('/api/v1/products/124', { failOnStatusCode: true });
+        const response = await request.get(`/api/v1/products/${randomProductId}`, {
+            failOnStatusCode: true,
+        });
         const product: ProductResponse = await response.json();
         product.images.forEach((image: string) => {
             expect(image).toMatch(/^https?:\/\/.+\.(jpg|jpeg|png|gif|webp)$/i);
@@ -174,13 +190,17 @@ test.describe('Get Product by ID', () => {
     });
 
     test('product images is an array for valid product ID', async ({ request }) => {
-        const response = await request.get('/api/v1/products/124', { failOnStatusCode: true });
+        const response = await request.get(`/api/v1/products/${randomProductId}`, {
+            failOnStatusCode: true,
+        });
         const product: ProductResponse = await response.json();
         expect(Array.isArray(product.images)).toBe(true);
     });
 
     test('should return 400 status code for non-existent product ID', async ({ request }) => {
-        const response = await request.get('/api/v1/products/1500');
+        const response = await request.get(`/api/v1/products/${randomProductId}`, {
+            failOnStatusCode: true,
+        });
         expect(response.status()).toBe(400);
     });
 });
@@ -264,6 +284,13 @@ test.describe('Create Product', () => {
 });
 
 test.describe('Update Product', () => {
+    let randomProductId: number;
+    test.beforeAll(async ({ request }) => {
+        const response = await request.get('/api/v1/products', { failOnStatusCode: true });
+        const products: ProductResponse[] = await response.json();
+        randomProductId = products[Math.floor(Math.random() * products.length)].id;
+    });
+
     test('should update an existing product and return 200 status code', async ({ request }) => {
         const updatedProduct: ProductRequest = {
             title: 'Updated Test Product' + Math.floor(Math.random() * 1000),
@@ -272,11 +299,12 @@ test.describe('Update Product', () => {
             categoryId: 1,
             images: ['https://example.com/updated-image.jpg'],
         };
-        const response = await request.put('/api/v1/products/124', {
+        const response = await request.put(`/api/v1/products/${randomProductId}`, {
             data: updatedProduct,
             failOnStatusCode: false,
         });
         expect(response.status()).toBe(200);
+        expect(response.statusText()).toBe('OK');
     });
 
     test('should return 404 status code when updating a non-existent product', async ({
@@ -304,7 +332,7 @@ test.describe('Update Product', () => {
             categoryId: 1,
             images: ['https://example.com/invalid-update-image.jpg'],
         };
-        const response = await request.put('/api/v1/products/124', {
+        const response = await request.put(`/api/v1/products/${randomProductId}`, {
             data: invalidProduct,
             failOnStatusCode: false,
         });
