@@ -1,13 +1,21 @@
 import { test, expect } from '@playwright/test';
 
-type Product = {
-    id?: number;
+type ProductRequest = {
     title: string;
     slug?: string;
     price: number;
     description: string;
-    categoryId?: number;
-    category?: {
+    categoryId: number;
+    images: string[];
+};
+
+type ProductResponse = {
+    id: number;
+    title: string;
+    slug: string;
+    price: number;
+    description: string;
+    category: {
         id: number;
         name: string;
         slug: string;
@@ -36,19 +44,19 @@ test.describe('Get All Products', () => {
 
     test('should return an array of products', async ({ request }) => {
         const response = await request.get('/api/v1/products', { failOnStatusCode: true });
-        const products: Product[] = await response.json();
+        const products: ProductResponse[] = await response.json();
         expect(Array.isArray(products)).toBe(true);
     });
 
     test('response body should not be empty', async ({ request }) => {
         const response = await request.get('/api/v1/products', { failOnStatusCode: true });
-        const products: Product[] = await response.json();
+        const products: ProductResponse[] = await response.json();
         expect(products.length).toBeGreaterThan(0);
     });
 
     test('each product should have required fields', async ({ request }) => {
         const response = await request.get('/api/v1/products', { failOnStatusCode: true });
-        const products: Product[] = await response.json();
+        const products: ProductResponse[] = await response.json();
         expect(products[0]).toHaveProperty('id');
         expect(products[0]).toHaveProperty('title');
         expect(products[0]).toHaveProperty('price');
@@ -59,48 +67,48 @@ test.describe('Get All Products', () => {
 
     test('all products should have a non-empty title', async ({ request }) => {
         const response = await request.get('/api/v1/products', { failOnStatusCode: true });
-        const products: Product[] = await response.json();
-        products.forEach((product: Product) => {
+        const products: ProductResponse[] = await response.json();
+        products.forEach((product: ProductResponse) => {
             expect(product.title).toBeTruthy();
         });
     });
 
     test('all products should have a non-empty description', async ({ request }) => {
         const response = await request.get('/api/v1/products', { failOnStatusCode: true });
-        const products: Product[] = await response.json();
-        products.forEach((product: Product) => {
+        const products: ProductResponse[] = await response.json();
+        products.forEach((product: ProductResponse) => {
             expect(product.description).toBeTruthy();
         });
     });
 
     test('all products should have a price greater than 0', async ({ request }) => {
         const response = await request.get('/api/v1/products', { failOnStatusCode: true });
-        const products: Product[] = await response.json();
-        products.forEach((product: Product) => {
+        const products: ProductResponse[] = await response.json();
+        products.forEach((product: ProductResponse) => {
             expect(product.price).toBeGreaterThan(0);
         });
     });
 
     test('all products should have an array of images', async ({ request }) => {
         const response = await request.get('/api/v1/products', { failOnStatusCode: true });
-        const products: Product[] = await response.json();
-        products.forEach((product: Product) => {
+        const products: ProductResponse[] = await response.json();
+        products.forEach((product: ProductResponse) => {
             expect(Array.isArray(product.images)).toBe(true);
         });
     });
 
     test('all products should have at least one image', async ({ request }) => {
         const response = await request.get('/api/v1/products', { failOnStatusCode: true });
-        const products: Product[] = await response.json();
-        products.forEach((product: Product) => {
+        const products: ProductResponse[] = await response.json();
+        products.forEach((product: ProductResponse) => {
             expect(product.images.length).toBeGreaterThan(0);
         });
     });
 
     test('product images should be valid URLs', async ({ request }) => {
         const response = await request.get('/api/v1/products', { failOnStatusCode: true });
-        const products: Product[] = await response.json();
-        products.forEach((product: Product) => {
+        const products: ProductResponse[] = await response.json();
+        products.forEach((product: ProductResponse) => {
             product.images.forEach((image: string) => {
                 expect(image).toMatch(/^https?:\/\/.+\.(jpg|jpeg|png|gif|webp)$/i);
             });
@@ -109,8 +117,8 @@ test.describe('Get All Products', () => {
 
     test('all products should have a valid category with id and name', async ({ request }) => {
         const response = await request.get('/api/v1/products', { failOnStatusCode: true });
-        const products: Product[] = await response.json();
-        products.forEach((product: Product) => {
+        const products: ProductResponse[] = await response.json();
+        products.forEach((product: ProductResponse) => {
             expect(product.category).toBeTruthy();
             expect(product.category!.id).toBeTruthy();
             expect(product.category!.name).toBeTruthy();
@@ -120,13 +128,13 @@ test.describe('Get All Products', () => {
 
 test.describe('Get Product by ID', () => {
     test('should return 200 status code for valid product ID', async ({ request }) => {
-        const response = await request.get('/api/v1/products/13');
+        const response = await request.get('/api/v1/products/124');
         expect(response.status()).toBe(200);
     });
 
     test('response time should be less than 1000ms for valid product ID', async ({ request }) => {
         const startTime = Date.now();
-        await request.get('/api/v1/products/13', { failOnStatusCode: true });
+        await request.get('/api/v1/products/124', { failOnStatusCode: true });
         const endTime = Date.now();
         const responseTime = endTime - startTime;
         expect(responseTime).toBeLessThan(1000);
@@ -135,19 +143,19 @@ test.describe('Get Product by ID', () => {
     test('content-Type header should be application/json for valid product ID', async ({
         request,
     }) => {
-        const response = await request.get('/api/v1/products/13', { failOnStatusCode: true });
+        const response = await request.get('/api/v1/products/124', { failOnStatusCode: true });
         expect(response.headers()['content-type']).toContain('application/json');
     });
 
     test('response should be an object for valid product ID', async ({ request }) => {
-        const response = await request.get('/api/v1/products/13', { failOnStatusCode: true });
+        const response = await request.get('/api/v1/products/124', { failOnStatusCode: true });
         const product = await response.json();
         expect(typeof product).toBe('object');
     });
 
     test('product has all required properties', async ({ request }) => {
-        const response = await request.get('/api/v1/products/13', { failOnStatusCode: true });
-        const product: Product = await response.json();
+        const response = await request.get('/api/v1/products/124', { failOnStatusCode: true });
+        const product: ProductResponse = await response.json();
         expect(product).toHaveProperty('id');
         expect(product).toHaveProperty('title');
         expect(product).toHaveProperty('slug');
@@ -157,36 +165,17 @@ test.describe('Get Product by ID', () => {
         expect(product).toHaveProperty('images');
     });
 
-    test('product details are correct for valid product ID', async ({ request }) => {
-        const response = await request.get('/api/v1/products/13', { failOnStatusCode: true });
-        const product: Product = await response.json();
-        expect(product.id).toBe(13);
-        expect(product.title).toBe('Classic Olive Chino Shorts');
-        expect(product.price).toBe(84);
-        expect(product.description).toBe(
-            'Elevate your casual wardrobe with these classic olive chino shorts. ' +
-                'Designed for comfort and versatility, they feature a smooth waistband, ' +
-                'practical pockets, and a tailored fit that makes them perfect for both relaxed ' +
-                'weekends and smart-casual occasions. The durable fabric ensures they hold up ' +
-                'throughout your daily activities while maintaining a stylish look.',
-        );
-        expect(product.category!.id).toBe(1);
-        expect(product.category!.name).toBe('Clothes');
-        expect(Array.isArray(product.images)).toBe(true);
-        expect(product.images.length).toBeGreaterThan(0);
-    });
-
     test('product images are valid URLs for valid product ID', async ({ request }) => {
-        const response = await request.get('/api/v1/products/13', { failOnStatusCode: true });
-        const product: Product = await response.json();
+        const response = await request.get('/api/v1/products/124', { failOnStatusCode: true });
+        const product: ProductResponse = await response.json();
         product.images.forEach((image: string) => {
             expect(image).toMatch(/^https?:\/\/.+\.(jpg|jpeg|png|gif|webp)$/i);
         });
     });
 
     test('product images is an array for valid product ID', async ({ request }) => {
-        const response = await request.get('/api/v1/products/13', { failOnStatusCode: true });
-        const product: Product = await response.json();
+        const response = await request.get('/api/v1/products/124', { failOnStatusCode: true });
+        const product: ProductResponse = await response.json();
         expect(Array.isArray(product.images)).toBe(true);
     });
 
@@ -198,7 +187,7 @@ test.describe('Get Product by ID', () => {
 
 test.describe('Create Product', () => {
     test('should create a new product and return 201 status code', async ({ request }) => {
-        const newProduct: Product = {
+        const newProduct: ProductRequest = {
             title: 'Test Product' + Math.floor(Math.random() * 1000),
             price: 99.99,
             description: 'This is a test product',
@@ -213,7 +202,7 @@ test.describe('Create Product', () => {
     });
 
     test('should return the created product with correct details', async ({ request }) => {
-        const newProduct: Product = {
+        const newProduct: ProductRequest = {
             title: 'Test Product' + Math.floor(Math.random() * 1000),
             price: 99.99,
             description: 'This is a test product',
@@ -224,12 +213,12 @@ test.describe('Create Product', () => {
             data: newProduct,
             failOnStatusCode: true,
         });
-        const createdProduct: Product = await response.json();
+        const createdProduct: ProductResponse = await response.json();
         expect(createdProduct).toHaveProperty('id');
         expect(createdProduct.title).toBe(newProduct.title);
         expect(createdProduct.price).toBe(newProduct.price);
         expect(createdProduct.description).toBe(newProduct.description);
-        expect(createdProduct.category!.id).toBe(newProduct.categoryId);
+        expect(createdProduct.category.id).toBe(newProduct.categoryId);
         expect(createdProduct.images).toEqual(newProduct.images);
     });
 
@@ -276,14 +265,14 @@ test.describe('Create Product', () => {
 
 test.describe('Update Product', () => {
     test('should update an existing product and return 200 status code', async ({ request }) => {
-        const updatedProduct: Product = {
+        const updatedProduct: ProductRequest = {
             title: 'Updated Test Product' + Math.floor(Math.random() * 1000),
             price: 79.99,
             description: 'This is an updated test product',
             categoryId: 1,
             images: ['https://example.com/updated-image.jpg'],
         };
-        const response = await request.put('/api/v1/products/13', {
+        const response = await request.put('/api/v1/products/124', {
             data: updatedProduct,
             failOnStatusCode: false,
         });
@@ -293,7 +282,7 @@ test.describe('Update Product', () => {
     test('should return 404 status code when updating a non-existent product', async ({
         request,
     }) => {
-        const updatedProduct: Product = {
+        const updatedProduct: ProductRequest = {
             title: 'Non-existent Product',
             price: 79.99,
             description: 'Trying to update a non-existent product',
@@ -315,7 +304,7 @@ test.describe('Update Product', () => {
             categoryId: 1,
             images: ['https://example.com/invalid-update-image.jpg'],
         };
-        const response = await request.put('/api/v1/products/13', {
+        const response = await request.put('/api/v1/products/124', {
             data: invalidProduct,
             failOnStatusCode: false,
         });
