@@ -58,12 +58,18 @@ test.describe('Get All Products', () => {
     test('each product should have required fields', async ({ request }) => {
         const response = await request.get('/api/v1/products', { failOnStatusCode: true });
         const products: ProductResponse[] = await response.json();
-        expect(products[0]).toHaveProperty('id');
-        expect(products[0]).toHaveProperty('title');
-        expect(products[0]).toHaveProperty('price');
-        expect(products[0]).toHaveProperty('description');
-        expect(products[0]).toHaveProperty('category');
-        expect(products[0]).toHaveProperty('images');
+        expect(products[0]).toMatchObject({
+            id: expect.any(Number),
+            title: expect.any(String),
+            price: expect.any(Number),
+            description: expect.any(String),
+            category: expect.objectContaining({
+                id: expect.any(Number),
+                name: expect.any(String),
+                slug: expect.any(String),
+            }),
+            images: expect.arrayContaining([expect.any(String)]),
+        });
     });
 
     test('all products should have a non-empty title', async ({ request }) => {
@@ -219,6 +225,22 @@ test.describe('Create Product', () => {
             failOnStatusCode: false,
         });
         expect(response.status()).toBe(201);
+        expect(response.statusText()).toBe('Created');
+    });
+
+    test('created product request should have correct headers', async ({ request }) => {
+        const newProduct: ProductRequest = {
+            title: 'Test Product' + Math.floor(Math.random() * 1000),
+            price: 99.99,
+            description: 'This is a test product',
+            categoryId: 1,
+            images: ['https://example.com/image.jpg'],
+        };
+        const response = await request.post('/api/v1/products', {
+            data: newProduct,
+            failOnStatusCode: false,
+        });
+        expect(response.headers()['content-type']).toContain('application/json');
     });
 
     test('should return the created product with correct details', async ({ request }) => {
@@ -234,6 +256,7 @@ test.describe('Create Product', () => {
             failOnStatusCode: true,
         });
         const createdProduct: ProductResponse = await response.json();
+        // expect(createdProduct).toMatchObject(newProduct);
         expect(createdProduct).toHaveProperty('id');
         expect(createdProduct.title).toBe(newProduct.title);
         expect(createdProduct.price).toBe(newProduct.price);
@@ -244,7 +267,7 @@ test.describe('Create Product', () => {
 
     test('should return 500 status code when required fields are missing', async ({ request }) => {
         const incompleteProduct = {
-            name: 'Incomplete Product',
+            title: 'Incomplete Product',
             // price: 99.99,
             description: 'This product is missing a price',
             categoryId: 1,
@@ -258,12 +281,25 @@ test.describe('Create Product', () => {
     });
 
     const invalidPriceCases = [
-        { description: 'negative price', price: -10 },
-        { description: 'zero price', price: 0 },
-        { description: 'non-numeric price', price: 'abc' as unknown as number },
+        {
+            description: 'negative price',
+            price: -10,
+            expectedMessage: 'price must be a positive number',
+        },
+        { description: 'zero price', price: 0, expectedMessage: 'price must be a positive number' },
+        {
+            description: 'non-numeric price',
+            price: 'abc' as unknown as number,
+            expectedMessage: 'price must be a positive number',
+        },
+        {
+            description: 'null price',
+            price: null as unknown as number,
+            expectedMessage: 'price should not be empty',
+        },
     ];
 
-    for (const { description, price } of invalidPriceCases) {
+    for (const { description, price, expectedMessage } of invalidPriceCases) {
         test(`should return 400 status code when price is invalid (${description})`, async ({
             request,
         }) => {
@@ -278,7 +314,12 @@ test.describe('Create Product', () => {
                 data: invalidProduct,
                 failOnStatusCode: false,
             });
+
+            const responseBody = await response.json();
             expect(response.status()).toBe(400);
+            expect(responseBody.error).toBe('Bad Request');
+            expect(responseBody.statusCode).toBe(400);
+            expect(responseBody.message).toEqual(expect.arrayContaining([expectedMessage]));
         });
     }
 });
@@ -294,17 +335,27 @@ test.describe('Update Product', () => {
     test('should update an existing product and return 200 status code', async ({ request }) => {
         const updatedProduct: ProductRequest = {
             title: 'Updated Test Product' + Math.floor(Math.random() * 1000),
-            price: 79.99,
+            price: 79,
             description: 'This is an updated test product',
             categoryId: 1,
             images: ['https://example.com/updated-image.jpg'],
         };
-        const response = await request.put(`/api/v1/products/${randomProductId}`, {
+        const putResponse = await request.put(`/api/v1/products/${randomProductId}`, {
             data: updatedProduct,
-            failOnStatusCode: false,
+            failOnStatusCode: true,
         });
-        expect(response.status()).toBe(200);
-        expect(response.statusText()).toBe('OK');
+
+        const getResponse = await request.get(`/api/v1/products/${randomProductId}`, {
+            failOnStatusCode: true,
+        });
+        const product: ProductResponse = await getResponse.json();
+        expect(putResponse.status()).toBe(200);
+        expect(putResponse.statusText()).toBe('OK');
+        expect(product.title).toBe(updatedProduct.title);
+        expect(product.price).toBe(updatedProduct.price);
+        expect(product.description).toBe(updatedProduct.description);
+        expect(product.category.id).toBe(updatedProduct.categoryId);
+        expect(product.images).toEqual(updatedProduct.images);
     });
 
     test('should return 404 status code when updating a non-existent product', async ({

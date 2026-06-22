@@ -10,7 +10,8 @@
         "format:check": "prettier --check .",
         "prepare": "husky",
         "test": "npx playwright test",
-        "test:ui": "npx playwright test --ui"
+        "test:ui": "npx playwright test --ui",
+        "show-report": "npx playwright show-report"
     },
     "repository": {
         "type": "git",
